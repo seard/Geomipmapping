@@ -1,0 +1,33 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Input
+Texture2D heightMap;
+float2 XYIteration;
+
+// Output
+RWTexture2D<float4> Result;
+
+// This method will compress a texture by the MAX-comparison
+// The result will then be used as a variance map to decide splitting of the terrain
+// to efficiently provide resolution where needed
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // Setup
+    // [i] is the X-coordinate in the instance array
+    // [j] is the Y-coordinate in the instance array
+    int i = id.x + 8 * XYIteration.x;
+    int j = id.y + 8 * XYIteration.y;
+
+    float maximum = heightMap[float2(i, j)].x;
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+    maximum = max(maximum, heightMap[float2(i++, j)].x);
+
+	Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+}

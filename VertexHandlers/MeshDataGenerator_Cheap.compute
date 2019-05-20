@@ -1,0 +1,115 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Input
+int indexingWidth;
+int resolutionMultiplier;
+float heightMultiplier;
+Texture2D heightMap;
+float heightMapSize;
+float3 position;
+float3 topLeft; float3 topRight;
+float3 bottomLeft; float3 bottomRight;
+Texture2D shiftArray; // The shift array is filled with 0's , -1's and 1's which determines if vertices get shifted to remove T-junctions or not
+
+// Output
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<float3> normals;
+RWStructuredBuffer<float2> uvs;
+RWStructuredBuffer<int> triangles;
+
+// With these settings we will run 8x8=64 instances simultaneously
+// Each instance will create two triangles which make out 1 plane together(?)
+//  __________
+// |\         |
+// |   \      |
+// |      \   |
+// |_________\|
+//
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	// Setup
+    // [i] is the X-coordinate in the instance array
+    // [j] is the Y-coordinate in the instance array
+	int i = id.x;
+	int j = id.y;
+
+    // [idx] the index of the current instance
+	int idx = i + indexingWidth * j;
+
+    // Calculate the step size depending on the array position of this instance
+	float step = 1.0f / (indexingWidth - 1);
+
+    // [lx] is the vertex X-position
+    // [ly] is the vertex Y-position
+	float lx = i * step;
+	float ly = j * step;
+
+	// Get height value at position
+	// We generate 8 vertices and 7 planes on each row. The first vertex is always redundant in this calculation, hence the "-1.0f"
+	float pixelStepLength = (bottomRight.x - bottomLeft.x) / ((8.0f * resolutionMultiplier) - 1.0f);
+	// Add 0.5f to X and Y, because vertex positions are situated at pixel corners, but we want pixel center positions
+	int2 mapIndex = int2(0.5f + bottomLeft.x + (i * pixelStepLength), 0.5f + bottomLeft.z + (j * pixelStepLength));
+	float height = heightMap[mapIndex].x;
+	
+	float rH = heightMap[float2(mapIndex.x + pixelStepLength, mapIndex.y)].x;
+	float uH = heightMap[float2(mapIndex.x, mapIndex.y + pixelStepLength)].x;
+	
+	// Set vertex position
+	vertices[idx] = float3(lx, height * heightMultiplier, ly);
+
+	// Set normal
+	float3 cP = float3(0, height, 0); // Center point
+	float3 uP = float3(0, uH, 1); // Up point
+	float3 rP = float3(1, rH, 0); // Right point
+
+	float3 uV = uP - cP;
+	float3 rV = rP - cP;
+
+	float3 crossUR = cross(uV, rV);
+
+	float3 N = normalize(crossUR);
+	normals[idx] = float3(N.x, N.y / 1024.0f, N.z);
+
+	// Calculate UV
+    float uMin = bottomLeft.x / heightMapSize;
+    float uMax = bottomRight.x / heightMapSize;
+    float vMin = bottomLeft.z / heightMapSize;
+    float vMax = topLeft.z / heightMapSize;
+
+	float widthMultiplier = (8.0f * resolutionMultiplier) - 1.0f;
+
+    float u = lerp(uMin, uMax, i / widthMultiplier);
+    float v = lerp(vMin, vMax, j / widthMultiplier);
+
+    uvs[idx] = float2(u, v);
+
+	// Calculate triangles by performing an "If i > 0 && j > 0 -> calculate triangles"
+    int iGreaterThan0 = clamp(i, 0, 1);
+    int jGreaterThan0 = clamp(j, 0, 1);
+    int ijGreaterThan0 = iGreaterThan0 * jGreaterThan0;
+
+    i = lerp(1, i, ijGreaterThan0);
+    j = lerp(1, j, ijGreaterThan0);
+
+    int tidx = ((i + (indexingWidth - 1) * j) - (indexingWidth)) * 6;
+
+	// Quad-generation
+	// _______________
+	// |\            |
+	// |   \         |
+	// |      \      |
+	// |         \   |
+	// |____________\|
+
+	// Triangle one
+    triangles[tidx++] = ((i - 1) + indexingWidth * (j - 1)); // Top left
+    triangles[tidx++] = (i + indexingWidth * j); // Bottom right
+    triangles[tidx++] = ((i) + indexingWidth * (j - 1)); // Top right
+
+	// Triangle two
+    triangles[tidx++] = ((i - 1) + indexingWidth * (j - 1)); // Top left
+    triangles[tidx++] = ((i - 1) + indexingWidth * (j)); // Bottom left
+    triangles[tidx++] = (i + indexingWidth * j); // Bottom right
+}
