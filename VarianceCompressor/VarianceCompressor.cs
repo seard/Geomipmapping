@@ -37,8 +37,6 @@ public class VarianceCompressor : MonoBehaviour
                 float result = 0;
 
                 // Iterate over all pixels that will be thrown, and find a value to describe the sum of the total
-                // This version finds the max and min values in the heightmap and sets the result to the difference between the two
-                // We use the max/min-difference because it describes the bumpiness of the terrain well
                 for (int x = 0; x < stepSize; x++)
                 {
                     for (int y = 0; y < stepSize; y++)
@@ -49,17 +47,8 @@ public class VarianceCompressor : MonoBehaviour
                         // Compare and set max/min
                         if (heightValue > maximum) maximum = heightValue;
                         if (heightValue < minimum) minimum = heightValue;
-
-                        //medianResult += maximum - minimum;
                     }
                 }
-
-                //float result = maximum - minimum;
-
-                //medianResult /= stepSize * stepSize;
-                //result = medianResult;
-
-
 
                 result = (maximum - minimum);
 

@@ -55,51 +55,6 @@ public class QuadTreeNode<T>
         }
     }
 
-    /*
-    public void GradientSubdivide(LinkedList<QuadTreeNode<T>> selectedNodes, Vector3 targetPosition, float radius, int depth = 0)
-    {
-        // This only runs for the lowest depth nodes
-        if (depth == 0)
-        {
-            selectedNodes.AddLast(this);
-            return;
-        }
-
-        var subdivIndex = GetIndexOfPosition(targetPosition, Position);
-
-        if (IsLeaf())
-        {
-            SubNodes = new QuadTreeNode<T>[4];
-
-            for (int i = 0; i < SubNodes.Length; i++)
-            {
-                Vector3 newPos = Position;
-
-                if ((i & 2) == 2)
-                    newPos.z -= Size * 0.25f;
-                else
-                    newPos.z += Size * 0.25f;
-
-                if ((i & 1) == 1)
-                    newPos.x += Size * 0.25f;
-                else
-                    newPos.x -= Size * 0.25f;
-
-                SubNodes[i] = new QuadTreeNode<T>(this, newPos, Size * 0.5f, depth - 1);
-            }
-        }
-
-        for (int i = 0; i < SubNodes.Length; i++)
-        {
-            int range = ContainedInRange(targetPosition, radius, 3);
-            if (depth > range)
-            {
-                SubNodes[i].GradientSubdivide(selectedNodes, targetPosition, radius, depth - 1);
-            }
-        }
-    }
-    */
-
     public bool IsLeaf
     {
         get { return SubNodes == null; }
@@ -115,16 +70,3 @@ public class QuadTreeNode<T>
         return index;
     }
 }
-/*
-public static class PlaneConstructor<T>
-{
-    public static GameObject CreatePlane(QuadTreeNode<T> owner, Vector3 position, float size, int depth)
-    {
-        GameObject patch = GameObject.Instantiate(Resources.Load("Patch") as GameObject);
-        patch.GetComponent<BlockToNodeLinker>().Owner = owner;
-        patch.transform.position = new Vector3(position.x, 0, position.z);
-        patch.transform.localScale = Vector3.one * size / 10;
-        return patch;
-    }
-}
-*/
